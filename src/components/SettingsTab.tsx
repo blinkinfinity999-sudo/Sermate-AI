@@ -84,39 +84,85 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     setTestResult(null);
 
     const startTime = performance.now();
+    const apiKey = settings.geminiApiKey?.trim();
+
+    if (!apiKey) {
+      if (soundEnabled) sound.playError();
+      setTestResult({
+        success: false,
+        message: 'Please enter a Gemini API Key to test.',
+      });
+      setIsTesting(false);
+      return;
+    }
 
     try {
-      const res = await fetch('/api/test-key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          apiKey: settings.geminiApiKey,
-          model: settings.model,
-        }),
-      });
+      // 1. Try backend endpoint first
+      let data: any = null;
+      try {
+        const res = await fetch('/api/test-key', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: settings.geminiApiKey,
+            model: settings.model,
+          }),
+        });
+        if (res.ok) {
+          data = await res.json();
+        }
+      } catch {
+        // Backend not available (e.g. GitHub Pages static host)
+      }
 
-      const data = await res.json();
-      const latencyMs = Math.round(performance.now() - startTime);
-
-      if (data.success) {
+      // 2. If backend endpoint returned data, use it
+      if (data && data.success) {
+        const latencyMs = Math.round(performance.now() - startTime);
         if (soundEnabled) sound.playSuccess();
         setTestResult({
           success: true,
           message: `Connection successful! Verified on ${data.modelUsed} (${latencyMs}ms)`,
           latencyMs,
         });
+        setIsTesting(false);
+        return;
+      }
+
+      // 3. Static host direct verification fallback (for GitHub Pages / static hosting)
+      const targetModel = settings.model || 'gemini-2.5-flash';
+      const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      
+      const directRes = await fetch(directUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: "Respond with the single word 'CONNECTED'." }] }],
+        }),
+      });
+
+      const latencyMs = Math.round(performance.now() - startTime);
+      const directData = await directRes.json();
+
+      if (directRes.ok && directData.candidates?.[0]?.content?.parts?.[0]?.text) {
+        if (soundEnabled) sound.playSuccess();
+        setTestResult({
+          success: true,
+          message: `Connection verified directly on ${targetModel} (${latencyMs}ms)! Ready for screen analysis.`,
+          latencyMs,
+        });
       } else {
         if (soundEnabled) sound.playError();
+        const errDetail = directData?.error?.message || 'Invalid API Key or model unavailable.';
         setTestResult({
           success: false,
-          message: data.error || 'Failed to authenticate with Gemini API.',
+          message: `API Key check failed: ${errDetail}`,
         });
       }
     } catch (err: any) {
       if (soundEnabled) sound.playError();
       setTestResult({
         success: false,
-        message: err.message || 'Network error when contacting API server.',
+        message: err.message || 'Network error when contacting Gemini API.',
       });
     } finally {
       setIsTesting(false);

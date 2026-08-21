@@ -1,20 +1,17 @@
 {
-  "short_name": "SerMate AI",
-  "name": "SerMate AI - Multimodal Screen Companion",
+  "short_name": "Sermate AI",
+  "name": "Sermate AI — Multimodal Screen Intelligence Assistant",
   "icons": [
     {
-      "src": "icon-192.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "icon-512.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "src": "./favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
     }
   ],
   "start_url": "./",
-  "background_color": "#0F172A",
+  "scope": "./",
+  "background_color": "#090E17",
   "theme_color": "#00F0FF",
   "display": "standalone",
   "orientation": "portrait"

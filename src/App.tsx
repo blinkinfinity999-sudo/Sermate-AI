@@ -338,7 +338,125 @@ export default function App() {
             return;
           }
         } catch (apiErr) {
-          console.warn('API network error, falling back to simulated scenario:', apiErr);
+          console.warn('Backend API unavailable, attempting direct client-side fallback if API Key is configured:', apiErr);
+
+          // Direct client fallback for static host deployments (e.g. GitHub Pages)
+          if (settings.geminiApiKey?.trim()) {
+            try {
+              const targetModel = settings.model || 'gemini-2.5-flash';
+              const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(settings.geminiApiKey.trim())}`;
+              const parts: any[] = [];
+
+              if (preparedImageBase64) {
+                const cleanBase64 = preparedImageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+                parts.push({
+                  inline_data: {
+                    mime_type: 'image/jpeg',
+                    data: cleanBase64,
+                  },
+                });
+                parts.push({
+                  text: `You are Sermate AI, an ultra-fast screen intelligence assistant.\nUser question: "${query}"\nRespond in JSON:\n{\n  "summary": "1-2 sentence overview",\n  "detailedAnswer": "Markdown formatted diagnosis and steps",\n  "detectedCategory": "UI/UX Review",\n  "confidence": 0.95,\n  "actionItems": ["Step 1", "Step 2"],\n  "boundingBoxes": [],\n  "suggestedFollowUps": ["Question 1", "Question 2"]\n}`,
+                });
+
+                const directRes = await fetch(directUrl, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    contents: [{ parts }],
+                    generationConfig: {
+                      responseMimeType: 'application/json',
+                    },
+                  }),
+                });
+
+                const rawJson = await directRes.json();
+                const outText = rawJson.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (outText) {
+                  let parsed: any;
+                  try {
+                    parsed = JSON.parse(outText);
+                  } catch {
+                    parsed = {
+                      summary: 'Screen Analysis Complete',
+                      detailedAnswer: outText,
+                      detectedCategory: 'General Q&A',
+                      confidence: 0.95,
+                      actionItems: ['Review analysis'],
+                      boundingBoxes: [],
+                      suggestedFollowUps: ['Explain further'],
+                    };
+                  }
+
+                  const resData: AnalysisResult = {
+                    ...parsed,
+                    latencyMs: Date.now() - startTime,
+                    imageOptimizationStats: optimizationStats,
+                  };
+
+                  setBoundingBoxes(resData.boundingBoxes?.length ? resData.boundingBoxes : currentScenario.mockResult.boundingBoxes);
+
+                  const newEntry: HistoryEntry = {
+                    id: 'hist-' + Date.now(),
+                    timestamp: Date.now(),
+                    prompt: query,
+                    scenarioTitle: customImageBase64 ? 'Custom Screenshot' : currentScenario.title,
+                    result: resData,
+                    modelUsed: targetModel,
+                  };
+                  const updatedHist = [newEntry, ...history];
+                  setHistory(updatedHist);
+                  saveHistory(updatedHist);
+
+                  setIsAnalyzing(false);
+                  streamTextOutput(resData.detailedAnswer || resData.summary, resData);
+                  return;
+                }
+              } else {
+                // Text direct fallback
+                const directRes = await fetch(directUrl, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    contents: [{ parts: [{ text: `You are Sermate AI, an ultra-fast multimodal screen companion. User query: "${query}". Provide a helpful, clear, and direct response in clean Markdown.` }] }],
+                  }),
+                });
+
+                const rawJson = await directRes.json();
+                const outText = rawJson.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (outText) {
+                  const resData: AnalysisResult = {
+                    summary: outText.slice(0, 100).replace(/[*#\n]/g, ' ') + (outText.length > 100 ? '...' : ''),
+                    detailedAnswer: outText,
+                    detectedCategory: 'General Q&A',
+                    confidence: 0.98,
+                    actionItems: ['Ask a follow-up or upload a screen to inspect'],
+                    boundingBoxes: [],
+                    suggestedFollowUps: ['How do I upload a screenshot?', 'Inspect active screen'],
+                    latencyMs: Date.now() - startTime,
+                  };
+
+                  const newEntry: HistoryEntry = {
+                    id: 'hist-' + Date.now(),
+                    timestamp: Date.now(),
+                    prompt: query,
+                    scenarioTitle: currentScenario.title,
+                    result: resData,
+                    modelUsed: targetModel,
+                  };
+                  const updatedHist = [newEntry, ...history];
+                  setHistory(updatedHist);
+                  saveHistory(updatedHist);
+
+                  setIsAnalyzing(false);
+                  streamTextOutput(resData.detailedAnswer, resData);
+                  return;
+                }
+              }
+            } catch (directErr) {
+              console.warn('Direct client fallback error:', directErr);
+            }
+          }
         }
       }
 
