@@ -1,0 +1,10 @@
+{
+  "name": " Sermate AI",
+  "description": "Multimodal AI Desktop \u0026 Mobile Assistant with live screen analysis, customizable floating overlay widget, and bounding box inspection.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
