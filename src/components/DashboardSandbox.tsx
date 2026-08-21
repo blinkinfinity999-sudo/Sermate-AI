@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScreenScenario, WidgetTheme, BoundingBox, AnalysisResult } from '../types';
+import { ScreenScenario, WidgetTheme, BoundingBox, AnalysisResult, ChatMessage } from '../types';
 import { SimulatedScreenCanvas } from './SimulatedScreenCanvas';
 import { FloatingPreviewWidget } from './FloatingPreviewWidget';
 import { 
@@ -27,6 +27,7 @@ interface DashboardSandboxProps {
   onToggleShowBoxes: () => void;
   selectedBoxId: string | null;
   onSelectBox: (boxId: string | null) => void;
+  messages: ChatMessage[];
   prompt: string;
   onChangePrompt: (prompt: string) => void;
   onAnalyze: (customPrompt?: string) => void;
@@ -35,6 +36,7 @@ interface DashboardSandboxProps {
   streamingText: string;
   isStreaming: boolean;
   onSelectFollowUp: (query: string) => void;
+  onClearChat: () => void;
   modelUsed: string;
   isMockMode: boolean;
   soundEnabled: boolean;
@@ -53,6 +55,7 @@ export const DashboardSandbox: React.FC<DashboardSandboxProps> = ({
   onToggleShowBoxes,
   selectedBoxId,
   onSelectBox,
+  messages,
   prompt,
   onChangePrompt,
   onAnalyze,
@@ -61,6 +64,7 @@ export const DashboardSandbox: React.FC<DashboardSandboxProps> = ({
   streamingText,
   isStreaming,
   onSelectFollowUp,
+  onClearChat,
   modelUsed,
   isMockMode,
   soundEnabled,
@@ -155,14 +159,14 @@ export const DashboardSandbox: React.FC<DashboardSandboxProps> = ({
         <div className="lg:col-span-5 flex flex-col">
           <FloatingPreviewWidget
             theme={theme}
+            messages={messages}
             prompt={prompt}
             onChangePrompt={onChangePrompt}
             onAnalyze={onAnalyze}
             isAnalyzing={isAnalyzing}
-            result={result}
-            streamingText={streamingText}
             isStreaming={isStreaming}
             onSelectFollowUp={onSelectFollowUp}
+            onClearChat={onClearChat}
             modeBadge={isMockMode ? 'MOCK ENGINE' : `AI: ${modelUsed.replace('gemini-', '')}`}
             isEmbeddedInSandbox={true}
           />

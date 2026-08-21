@@ -398,25 +398,38 @@ export const WidgetCustomizer: React.FC<WidgetCustomizerProps> = ({
             <div className="w-full relative z-10">
               <FloatingPreviewWidget
                 theme={theme}
+                messages={[
+                  {
+                    id: 'preview-user',
+                    sender: 'user',
+                    text: demoPrompt,
+                    timestamp: Date.now() - 5000,
+                  },
+                  {
+                    id: 'preview-assistant',
+                    sender: 'assistant',
+                    text: 'Widget appearance is updated immediately. All accent tones, blur filters, background opacities, and rounded corners are applied in real time.',
+                    timestamp: Date.now(),
+                    result: {
+                      summary: 'Sermate AI HUD Theme Preview',
+                      detailedAnswer: 'Widget appearance is updated immediately. All accent tones, blur filters, background opacities, and rounded corners are applied in real time.',
+                      detectedCategory: 'UI/UX Review',
+                      confidence: 0.99,
+                      actionItems: [
+                        'Theme preferences saved to localStorage',
+                        'Hotkeys mapped for desktop invocation',
+                      ],
+                      suggestedFollowUps: ['Test hotkey scan in sandbox', 'Inspect bounding box style'],
+                      boundingBoxes: [],
+                    }
+                  }
+                ]}
                 prompt={demoPrompt}
                 onChangePrompt={setDemoPrompt}
                 onAnalyze={() => {
                   if (soundEnabled) sound.playPing();
                 }}
                 isAnalyzing={false}
-                result={{
-                  summary: 'Sermate AI HUD Theme Preview',
-                  detailedAnswer: 'Widget appearance is updated immediately. All accent tones, blur filters, background opacities, and rounded corners are applied in real time.',
-                  detectedCategory: 'UI/UX Review',
-                  confidence: 0.99,
-                  actionItems: [
-                    'Theme preferences saved to localStorage',
-                    'Hotkeys mapped for desktop invocation',
-                  ],
-                  suggestedFollowUps: ['Test hotkey scan in sandbox', 'Inspect bounding box style'],
-                  boundingBoxes: [],
-                }}
-                streamingText=""
                 isStreaming={false}
                 onSelectFollowUp={() => {}}
                 modeBadge="THEME PREVIEW"

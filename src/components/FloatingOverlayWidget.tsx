@@ -1,14 +1,8 @@
 import React, { useState } from 'react';
-import { WidgetTheme, AnalysisResult } from '../types';
+import { WidgetTheme, ChatMessage } from '../types';
 import { FloatingPreviewWidget } from './FloatingPreviewWidget';
 import { 
-  Sparkles, 
   X, 
-  Minus, 
-  Maximize2, 
-  Power, 
-  Layers, 
-  ExternalLink,
   ChevronUp,
   ChevronDown
 } from 'lucide-react';
@@ -19,14 +13,14 @@ interface FloatingOverlayWidgetProps {
   theme: WidgetTheme;
   isOpen: boolean;
   onToggleOpen: () => void;
+  messages: ChatMessage[];
   prompt: string;
   onChangePrompt: (prompt: string) => void;
   onAnalyze: (customPrompt?: string) => void;
   isAnalyzing: boolean;
-  result: AnalysisResult | null;
-  streamingText: string;
   isStreaming: boolean;
   onSelectFollowUp: (query: string) => void;
+  onClearChat: () => void;
   isMockMode: boolean;
   modelUsed: string;
 }
@@ -35,14 +29,14 @@ export const FloatingOverlayWidget: React.FC<FloatingOverlayWidgetProps> = ({
   theme,
   isOpen,
   onToggleOpen,
+  messages,
   prompt,
   onChangePrompt,
   onAnalyze,
   isAnalyzing,
-  result,
-  streamingText,
   isStreaming,
   onSelectFollowUp,
+  onClearChat,
   isMockMode,
   modelUsed,
 }) => {
@@ -61,6 +55,12 @@ export const FloatingOverlayWidget: React.FC<FloatingOverlayWidgetProps> = ({
       default:
         return 'bottom-6 right-6';
     }
+  };
+
+  const handleCloseAndClear = () => {
+    if (theme.soundEnabled) sound.playClick();
+    onClearChat();
+    onToggleOpen();
   };
 
   return (
@@ -127,20 +127,17 @@ export const FloatingOverlayWidget: React.FC<FloatingOverlayWidgetProps> = ({
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setIsMinimized(!isMinimized)}
-                className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
+                className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors cursor-pointer"
                 title={isMinimized ? 'Expand' : 'Collapse'}
               >
                 {isMinimized ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
               </button>
               <button
-                onClick={() => {
-                  if (theme.soundEnabled) sound.playClick();
-                  onToggleOpen();
-                }}
-                className="p-1 text-slate-400 hover:text-rose-400 rounded hover:bg-slate-800 transition-colors"
-                title="Hide HUD"
+                onClick={handleCloseAndClear}
+                className="p-1 text-slate-400 hover:text-rose-400 rounded hover:bg-slate-800 transition-colors cursor-pointer"
+                title="Close & Clear History (X)"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-4 h-4 text-rose-400 hover:scale-110 transition-transform" />
               </button>
             </div>
           </div>
@@ -150,14 +147,14 @@ export const FloatingOverlayWidget: React.FC<FloatingOverlayWidgetProps> = ({
             <div className="max-h-[600px] overflow-hidden flex flex-col">
               <FloatingPreviewWidget
                 theme={theme}
+                messages={messages}
                 prompt={prompt}
                 onChangePrompt={onChangePrompt}
                 onAnalyze={onAnalyze}
                 isAnalyzing={isAnalyzing}
-                result={result}
-                streamingText={streamingText}
                 isStreaming={isStreaming}
                 onSelectFollowUp={onSelectFollowUp}
+                onClearChat={onClearChat}
                 modeBadge={isMockMode ? 'MOCK MODE' : `AI: ${modelUsed.replace('gemini-', '')}`}
                 isEmbeddedInSandbox={false}
               />

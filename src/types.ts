@@ -77,3 +77,13 @@ export interface HistoryEntry {
   result: AnalysisResult;
   modelUsed: string;
 }
+
+export interface ChatMessage {
+  id: string;
+  sender: 'user' | 'assistant';
+  text: string;
+  timestamp: number;
+  result?: AnalysisResult;
+  modelUsed?: string;
+  isStreaming?: boolean;
+}

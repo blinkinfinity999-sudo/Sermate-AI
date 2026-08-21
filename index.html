@@ -6,10 +6,77 @@
     <title>Sermate AI — Multimodal Screen Intelligence Assistant</title>
     <meta name="description" content="Sermate AI: Intelligent multimodal AI assistant with live screen analysis, customizable floating overlay widget, and bounding box inspection." />
     <meta name="theme-color" content="#00F0FF" />
-    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <link rel="apple-touch-icon" href="./icon-192.png" />
-    <link rel="manifest" href="./manifest.json" />
+    <script>
+      (function() {
+        try {
+          // Dynamically create high-resolution Sermate AI logo favicon
+          var canvas = document.createElement('canvas');
+          canvas.width = 64;
+          canvas.height = 64;
+          var ctx = canvas.getContext('2d');
+          if (ctx) {
+            // High-tech dark background with cyan border
+            var r = 14;
+            var w = 64, h = 64;
+            ctx.beginPath();
+            ctx.moveTo(r, 0);
+            ctx.lineTo(w - r, 0);
+            ctx.quadraticCurveTo(w, 0, w, r);
+            ctx.lineTo(w, h - r);
+            ctx.quadraticCurveTo(w, h, w - r, h);
+            ctx.lineTo(r, h);
+            ctx.quadraticCurveTo(0, h, 0, h - r);
+            ctx.lineTo(0, r);
+            ctx.quadraticCurveTo(0, 0, r, 0);
+            ctx.closePath();
+            
+            var grad = ctx.createLinearGradient(0, 0, 64, 64);
+            grad.addColorStop(0, '#020617');
+            grad.addColorStop(0.5, '#082f49');
+            grad.addColorStop(1, '#0f172a');
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            // Glowing cyan perimeter
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#00F0FF';
+            ctx.stroke();
+
+            // Glowing radial lens / iris
+            ctx.beginPath();
+            ctx.arc(32, 32, 17, 0, Math.PI * 2);
+            var innerGrad = ctx.createRadialGradient(32, 32, 2, 32, 32, 17);
+            innerGrad.addColorStop(0, '#00F0FF');
+            innerGrad.addColorStop(0.7, '#0284c7');
+            innerGrad.addColorStop(1, 'rgba(2, 132, 199, 0.15)');
+            ctx.fillStyle = innerGrad;
+            ctx.fill();
+
+            // Stylized 'S' AI emblem
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 24px "Plus Jakarta Sans", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('S', 32, 33);
+
+            var iconUrl = canvas.toDataURL('image/png');
+            var link = document.createElement('link');
+            link.type = 'image/png';
+            link.rel = 'icon';
+            link.href = iconUrl;
+            document.head.appendChild(link);
+
+            var shortcutLink = document.createElement('link');
+            shortcutLink.type = 'image/png';
+            shortcutLink.rel = 'shortcut icon';
+            shortcutLink.href = iconUrl;
+            document.head.appendChild(shortcutLink);
+          }
+        } catch (e) {
+          console.warn('Favicon script initialized', e);
+        }
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
