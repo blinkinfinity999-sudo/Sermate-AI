@@ -11,7 +11,11 @@ import {
   CheckCircle2, 
   AlertTriangle,
   ArrowRight,
-  Flame
+  Flame,
+  Power,
+  Download,
+  ExternalLink,
+  Monitor
 } from 'lucide-react';
 import { sound } from '../utils/audio';
 
@@ -41,6 +45,10 @@ interface DashboardSandboxProps {
   isMockMode: boolean;
   soundEnabled: boolean;
   hotkeyFlashed: boolean;
+  widgetActive: boolean;
+  onToggleWidgetActive: () => void;
+  onTriggerDirectInstall: () => Promise<void>;
+  isAppInstalled: boolean;
 }
 
 export const DashboardSandbox: React.FC<DashboardSandboxProps> = ({
@@ -69,6 +77,10 @@ export const DashboardSandbox: React.FC<DashboardSandboxProps> = ({
   isMockMode,
   soundEnabled,
   hotkeyFlashed,
+  widgetActive,
+  onToggleWidgetActive,
+  onTriggerDirectInstall,
+  isAppInstalled,
 }) => {
   const isMac = typeof window !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
   const hotkeyText = isMac ? 'Cmd + Backspace' : 'Ctrl + Shift + Backspace';
@@ -132,6 +144,52 @@ export const DashboardSandbox: React.FC<DashboardSandboxProps> = ({
               <ArrowRight className="w-3 h-3" />
             </button>
           </div>
+        </div>
+
+        {/* HUD Companion Quick Controls & Install Bar */}
+        <div className="mt-4 pt-3.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs relative z-10">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Primary HUD Toggle Button requested by user */}
+            <button
+              id="btn-banner-toggle-hud"
+              onClick={() => {
+                if (soundEnabled) sound.playPing();
+                onToggleWidgetActive();
+              }}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border transition-all cursor-pointer font-semibold shadow-sm ${
+                widgetActive
+                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25 shadow-emerald-500/10'
+                  : 'bg-rose-500/15 border-rose-500/40 text-rose-300 hover:bg-rose-500/25'
+              }`}
+              title="Toggle AI Screen Partner on screen"
+            >
+              <Power className={`w-3.5 h-3.5 ${widgetActive ? 'text-emerald-400' : 'text-rose-400'}`} />
+              <span className="font-mono uppercase font-bold text-[11px]">
+                SCREEN PARTNER: {widgetActive ? 'ACTIVE' : 'OFF'}
+              </span>
+              <span className="text-[10px] opacity-75 hidden sm:inline">
+                {widgetActive ? '(Companion active on screen)' : '(Click to start)'}
+              </span>
+            </button>
+          </div>
+
+          {!isAppInstalled && (
+            <div className="flex items-center gap-2">
+              {/* Direct Browser App Install Trigger (disappears when downloaded) */}
+              <button
+                id="btn-banner-install-app"
+                onClick={async () => {
+                  if (soundEnabled) sound.playClick();
+                  await onTriggerDirectInstall();
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-xl font-bold transition-all shadow-md shadow-cyan-500/20 cursor-pointer"
+                title="Install SerMate AI as a desktop or mobile application"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Install SerMate App</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

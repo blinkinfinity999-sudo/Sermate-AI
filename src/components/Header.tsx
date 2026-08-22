@@ -170,10 +170,11 @@ export const Header: React.FC<HeaderProps> = ({
               ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
               : 'bg-rose-500/10 border-rose-500/30 text-rose-400 hover:bg-rose-500/20'
           }`}
+          title="Toggle SerMate AI Permanent Screen Partner on/off"
         >
           <div className={`w-2 h-2 rounded-full ${widgetActive ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
           <span className="text-[10px] font-extrabold uppercase tracking-wider font-mono">
-            HUD: {widgetActive ? 'ACTIVE' : 'OFF'}
+            PARTNER: {widgetActive ? 'ACTIVE' : 'OFF'}
           </span>
         </button>
       </div>

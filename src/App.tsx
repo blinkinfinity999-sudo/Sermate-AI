@@ -28,14 +28,33 @@ import { DashboardSandbox } from './components/DashboardSandbox';
 import { WidgetCustomizer } from './components/WidgetCustomizer';
 import { SettingsTab } from './components/SettingsTab';
 import { FloatingOverlayWidget } from './components/FloatingOverlayWidget';
+import { InstallModal } from './components/InstallModal';
+import { RightEdgeInstallButton } from './components/RightEdgeInstallButton';
+import { StandaloneHudView } from './components/StandaloneHudView';
+import { openStandaloneFloatingHUD } from './utils/pipCompanion';
 
 export default function App() {
+  // Check if opened as standalone HUD window (#standalone-hud)
+  const [isStandaloneHud, setIsStandaloneHud] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && window.location.hash === '#standalone-hud';
+  });
+
   // Navigation & Core States
   const [activeTab, setActiveTab] = useState<'dashboard' | 'customizer' | 'settings'>('dashboard');
   const [theme, setTheme] = useState<WidgetTheme>(loadStoredTheme);
   const [settings, setSettings] = useState<SettingsState>(loadStoredSettings);
   const [widgetActive, setWidgetActive] = useState<boolean>(loadWidgetActive);
   const [history, setHistory] = useState<HistoryEntry[]>(loadHistory);
+
+  // Install Modal & PWA Prompt States
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState<boolean>(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isAppInstalled, setIsAppInstalled] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true
+    );
+  });
 
   // Scenario & Screen State
   const [currentScenario, setCurrentScenario] = useState<ScreenScenario>(MOCK_SCENARIOS[0]);
@@ -66,6 +85,36 @@ export default function App() {
 
   const streamIntervalRef = useRef<any>(null);
 
+  // Listen for hash change (#standalone-hud)
+  useEffect(() => {
+    const handleHashChange = () => {
+      setIsStandaloneHud(window.location.hash === '#standalone-hud');
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Listen for PWA beforeinstallprompt event
+  useEffect(() => {
+    const handleBeforeInstall = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    const handleAppInstalled = () => {
+      setIsAppInstalled(true);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
   // Sync Theme to localStorage
   const handleUpdateTheme = (newTheme: WidgetTheme) => {
     setTheme(newTheme);
@@ -81,6 +130,26 @@ export default function App() {
   const handleUpdateSettings = (newSettings: SettingsState) => {
     setSettings(newSettings);
     saveStoredSettings(newSettings);
+  };
+
+  // Direct 1-Click PWA Browser Installation Trigger
+  const handleTriggerDirectInstall = async () => {
+    if (deferredPrompt) {
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          if (theme.soundEnabled) sound.playSuccess();
+          setIsAppInstalled(true);
+          setDeferredPrompt(null);
+        }
+      } catch (err) {
+        console.warn('Install prompt execution:', err);
+      }
+    } else {
+      // Fallback instruction for browsers where beforeinstallprompt was already consumed or in Safari/Firefox
+      setIsInstallModalOpen(true);
+    }
   };
 
   // Toggle Widget Active Status
@@ -419,6 +488,32 @@ export default function App() {
     };
   }, []);
 
+  // If opened as standalone popup or Picture-in-Picture window (#standalone-hud)
+  if (isStandaloneHud) {
+    return (
+      <StandaloneHudView
+        theme={theme}
+        messages={messages}
+        prompt={prompt}
+        onChangePrompt={setPrompt}
+        onAnalyze={handleAnalyzeScreen}
+        isAnalyzing={isAnalyzing}
+        isStreaming={isStreaming}
+        onSelectFollowUp={(q) => handleAnalyzeScreen(q)}
+        onClearChat={handleClearChat}
+        isMockMode={settings.isMockMode || !settings.geminiApiKey}
+        modelUsed={settings.model}
+      />
+    );
+  }
+
+  const handleLaunchFloatingHUD = () => {
+    if (!widgetActive) {
+      handleToggleWidgetActive();
+    }
+    openStandaloneFloatingHUD();
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Top Main Navigation Header */}
@@ -467,6 +562,10 @@ export default function App() {
             isMockMode={settings.isMockMode || !settings.geminiApiKey}
             soundEnabled={theme.soundEnabled}
             hotkeyFlashed={hotkeyFlashed}
+            widgetActive={widgetActive}
+            onToggleWidgetActive={handleToggleWidgetActive}
+            onTriggerDirectInstall={handleTriggerDirectInstall}
+            isAppInstalled={isAppInstalled}
           />
         )}
 
@@ -520,6 +619,24 @@ export default function App() {
           modelUsed={settings.model}
         />
       )}
+
+      {/* Small Download Button on the Right Mid Edge of the Screen (Disappears when installed) */}
+      <RightEdgeInstallButton
+        onTriggerDirectInstall={handleTriggerDirectInstall}
+        soundEnabled={theme.soundEnabled}
+        isAppInstalled={isAppInstalled}
+      />
+
+      {/* Download & Install Sermate AI Window Modal */}
+      <InstallModal
+        isOpen={isInstallModalOpen}
+        onClose={() => setIsInstallModalOpen(false)}
+        widgetActive={widgetActive}
+        onToggleWidgetActive={handleToggleWidgetActive}
+        soundEnabled={theme.soundEnabled}
+        deferredPrompt={deferredPrompt}
+        isAppInstalled={isAppInstalled}
+      />
 
       {/* Simple Footer */}
       <footer className="border-t border-slate-900 bg-slate-950/60 py-4 px-6 text-center text-xs text-slate-500">
