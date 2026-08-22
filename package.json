@@ -19,10 +19,12 @@
   "build": {
     "appId": "com.sermate.ai",
     "productName": "Sermate AI",
+    "asar": true,
     "npmRebuild": false,
     "nodeGypRebuild": false,
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "public"
     },
     "files": [
       "dist/**/*",
@@ -32,7 +34,14 @@
     ],
     "win": {
       "target": [
-        "nsis"
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
       ],
       "icon": "public/icon-512.png"
     },

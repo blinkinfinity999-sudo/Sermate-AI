@@ -12,12 +12,20 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
-// Register PWA Service Worker for offline caching safely
-if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch((err) => {
-      console.log('SW registration notice:', err);
+// Ensure any outdated service worker caches from previous build hashes are uninstalled
+if ('serviceWorker' in navigator) {
+  if (process.env.NODE_ENV !== 'production') {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) {
+        registration.unregister();
+      }
     });
-  });
+  } else {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch((err) => {
+        console.log('SW registration notice:', err);
+      });
+    });
+  }
 }
 

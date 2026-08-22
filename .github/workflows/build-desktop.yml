@@ -1,4 +1,4 @@
-name: Build Windows Desktop App
+name: Build Desktop App
 
 on:
   push:
@@ -16,8 +16,11 @@ permissions:
 
 jobs:
   build-windows:
-    name: Build Windows Installer (.exe)
+    name: Build Windows Executable (.exe)
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Checkout repository
@@ -27,28 +30,34 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: |
+          npm install --no-audit --no-fund --legacy-peer-deps
 
-      - name: Build Web & Server Assets
-        run: npm run build
+      - name: Build Web Application & Server
+        run: |
+          npm run build
 
-      - name: Build Windows NSIS Installer (.exe)
-        run: npx electron-builder --win nsis --publish never
+      - name: Verify Build Output
+        run: |
+          ls -la dist/
+
+      - name: Package Windows Installer & Portable Executable
+        run: |
+          npx --yes electron-builder --win --x64 --publish never -c.npmRebuild=false -c.nodeGypRebuild=false
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: 'true'
 
-      - name: Upload Windows Executable Artifact
+      - name: Upload Windows Executable Artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Sermate-AI-Windows-Installer
+          name: Sermate-AI-Windows-x64
           path: |
             release/*.exe
             release/*.blockmap
-            release/builder-effective-config.yaml
+            release/*.yaml
           retention-days: 30
           if-no-files-found: warn

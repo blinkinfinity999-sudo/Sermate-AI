@@ -1,48 +1,49 @@
-const CACHE_NAME = 'sermate-ai-v2';
-const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './manifest.json',
-  './favicon.svg'
-];
+const CACHE_NAME = 'sermate-ai-v3';
 
-// Install Event - Cache assets safely
+// Install Event - Clean, resilient caching without blocking startup
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE).catch((err) => {
-        console.warn('Cache prefetch notice:', err);
-      });
-    })
-  );
   self.skipWaiting();
 });
 
-// Activate Event - Clean old caches
+// Activate Event - Clean old cached entries
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
+          return caches.delete(key);
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Fetch Event - Serve cached assets when offline
+// Fetch Event - Network first for assets, graceful fallback
 self.addEventListener('fetch', (event) => {
-  // Only cache GET requests and skip API routes
-  if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
+  // Only handle GET and skip API/websocket/dev requests
+  if (
+    event.request.method !== 'GET' || 
+    event.request.url.includes('/api/') ||
+    event.request.url.includes('@vite') ||
+    event.request.url.includes('node_modules')
+  ) {
     return;
   }
+
+  // Network first strategy
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
+    fetch(event.request)
+      .then((networkResponse) => {
+        return networkResponse;
+      })
+      .catch(() => {
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) return cachedResponse;
+          if (event.request.headers.get('accept')?.includes('text/html')) {
+            return caches.match('./') || caches.match('/index.html');
+          }
+          return new Response('', { status: 408, statusText: 'Request timed out' });
+        });
+      })
   );
 });
