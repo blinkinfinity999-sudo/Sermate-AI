@@ -1,6 +1,9 @@
 {
   "name": "sermate-ai",
+  "productName": "Sermate AI",
   "version": "1.0.0",
+  "description": "Multimodal AI Desktop & Mobile Assistant with live screen analysis and floating overlay widget",
+  "author": "Sermate AI Team",
   "private": true,
   "type": "module",
   "main": "main.cjs",
@@ -9,14 +12,15 @@
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "electron:dev": "concurrently \"vite\" \"electron .\"",
-    "electron:build": "npm run build && electron-builder --win nsis",
+    "electron:build": "npm run build && electron-builder --win nsis --publish never",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
   },
   "build": {
     "appId": "com.sermate.ai",
     "productName": "Sermate AI",
-    "electronVersion": "34.2.0",
+    "npmRebuild": false,
+    "nodeGypRebuild": false,
     "directories": {
       "output": "release"
     },
@@ -30,7 +34,7 @@
       "target": [
         "nsis"
       ],
-      "icon": "public/icon.png"
+      "icon": "public/icon-512.png"
     },
     "nsis": {
       "oneClick": false,
@@ -38,7 +42,8 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Sermate AI"
-    }
+    },
+    "publish": null
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

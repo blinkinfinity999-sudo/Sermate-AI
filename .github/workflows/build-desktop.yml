@@ -36,10 +36,10 @@ jobs:
         run: npm run build
 
       - name: Build Windows NSIS Installer (.exe)
-        run: npx electron-builder --win nsis
+        run: npx electron-builder --win nsis --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEBUG: electron-builder
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: 'true'
 
       - name: Upload Windows Executable Artifact
         uses: actions/upload-artifact@v4
