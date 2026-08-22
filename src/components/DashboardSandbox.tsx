@@ -1,6 +1,5 @@
 import React from 'react';
-import { ScreenScenario, WidgetTheme, BoundingBox, AnalysisResult, ChatMessage } from '../types';
-import { SimulatedScreenCanvas } from './SimulatedScreenCanvas';
+import { WidgetTheme, AnalysisResult, ChatMessage } from '../types';
 import { FloatingPreviewWidget } from './FloatingPreviewWidget';
 import { 
   Keyboard, 
@@ -15,22 +14,20 @@ import {
   Power,
   Download,
   ExternalLink,
-  Monitor
+  PictureInPicture2,
+  Minimize2,
+  Camera,
+  Layers,
+  Radio,
+  Upload
 } from 'lucide-react';
 import { sound } from '../utils/audio';
 
 interface DashboardSandboxProps {
   theme: WidgetTheme;
-  scenario: ScreenScenario;
-  onSelectScenario: (scenario: ScreenScenario) => void;
-  allScenarios: ScreenScenario[];
   customImageBase64: string | null;
   onUploadCustomImage: (base64: string) => void;
-  boundingBoxes: BoundingBox[];
-  showBoxes: boolean;
-  onToggleShowBoxes: () => void;
-  selectedBoxId: string | null;
-  onSelectBox: (boxId: string | null) => void;
+  onRemoveCustomImage?: () => void;
   messages: ChatMessage[];
   prompt: string;
   onChangePrompt: (prompt: string) => void;
@@ -49,20 +46,16 @@ interface DashboardSandboxProps {
   onToggleWidgetActive: () => void;
   onTriggerDirectInstall: () => Promise<void>;
   isAppInstalled: boolean;
+  isPipActive?: boolean;
+  onTogglePip?: () => void;
+  onCaptureScreen?: () => void;
 }
 
 export const DashboardSandbox: React.FC<DashboardSandboxProps> = ({
   theme,
-  scenario,
-  onSelectScenario,
-  allScenarios,
   customImageBase64,
   onUploadCustomImage,
-  boundingBoxes,
-  showBoxes,
-  onToggleShowBoxes,
-  selectedBoxId,
-  onSelectBox,
+  onRemoveCustomImage,
   messages,
   prompt,
   onChangePrompt,
@@ -81,12 +74,15 @@ export const DashboardSandbox: React.FC<DashboardSandboxProps> = ({
   onToggleWidgetActive,
   onTriggerDirectInstall,
   isAppInstalled,
+  isPipActive = false,
+  onTogglePip,
+  onCaptureScreen,
 }) => {
   const isMac = typeof window !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
   const hotkeyText = isMac ? 'Cmd + Backspace' : 'Ctrl + Shift + Backspace';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-5xl mx-auto w-full">
       {/* Top Banner: Hotkeys & Quick Intro */}
       <div 
         className={`relative overflow-hidden rounded-2xl border transition-all duration-300 p-4 sm:p-5 glass shadow-xl ${
@@ -104,14 +100,14 @@ export const DashboardSandbox: React.FC<DashboardSandboxProps> = ({
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500" />
               </span>
               <h2 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                Live Interactive Sandbox
+                SerMate AI Assistant
               </h2>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold">
-                Ready
+                Online
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-400 max-w-2xl">
-              Inspect simulated code crashes, mobile UI bugs, or database deadlocks. Trigger screen intelligence with one click or press your global hotkey.
+              Inspect screens, debug coding errors, or ask any question. Trigger intelligence via hotkey or pop out the floating overlay over your desktop apps.
             </p>
           </div>
 
@@ -146,10 +142,10 @@ export const DashboardSandbox: React.FC<DashboardSandboxProps> = ({
           </div>
         </div>
 
-        {/* HUD Companion Quick Controls & Install Bar */}
+        {/* HUD Companion Quick Controls & PiP Pop Out Bar */}
         <div className="mt-4 pt-3.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs relative z-10">
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* Primary HUD Toggle Button requested by user */}
+            {/* Primary HUD Toggle Button */}
             <button
               id="btn-banner-toggle-hud"
               onClick={() => {
@@ -171,11 +167,44 @@ export const DashboardSandbox: React.FC<DashboardSandboxProps> = ({
                 {widgetActive ? '(Companion active on screen)' : '(Click to start)'}
               </span>
             </button>
+
+            {/* Document Picture-in-Picture Pop Out Button */}
+            {onTogglePip && (
+              <button
+                id="btn-banner-pip-popout"
+                onClick={() => {
+                  if (soundEnabled) sound.playPing();
+                  onTogglePip();
+                }}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border transition-all cursor-pointer font-semibold shadow-sm ${
+                  isPipActive
+                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 hover:bg-amber-500/30 shadow-amber-500/10'
+                    : 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/30 hover:border-cyan-400 shadow-cyan-500/10'
+                }`}
+                title="Pop out widget into floating Picture-in-Picture window over all software"
+              >
+                {isPipActive ? (
+                  <>
+                    <Minimize2 className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                    <span className="font-mono uppercase font-bold text-[11px]">
+                      DOCK WIDGET IN TAB
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <PictureInPicture2 className="w-3.5 h-3.5 text-cyan-400" />
+                    <span className="font-mono uppercase font-bold text-[11px]">
+                      POP OUT WIDGET (PiP)
+                    </span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
           {!isAppInstalled && (
             <div className="flex items-center gap-2">
-              {/* Direct Browser App Install Trigger (disappears when downloaded) */}
+              {/* Direct Browser App Install Trigger */}
               <button
                 id="btn-banner-install-app"
                 onClick={async () => {
@@ -193,63 +222,133 @@ export const DashboardSandbox: React.FC<DashboardSandboxProps> = ({
         </div>
       </div>
 
-      {/* Main 2-Column Sandbox Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        {/* Left Column: Simulated Screen (7 cols) */}
-        <div className="lg:col-span-7 flex flex-col">
-          <SimulatedScreenCanvas
-            scenario={scenario}
-            onSelectScenario={onSelectScenario}
-            allScenarios={allScenarios}
-            customImageBase64={customImageBase64}
-            onUploadCustomImage={onUploadCustomImage}
-            boundingBoxes={boundingBoxes}
-            showBoxes={showBoxes}
-            onToggleShowBoxes={onToggleShowBoxes}
-            selectedBoxId={selectedBoxId}
-            onSelectBox={onSelectBox}
-            isScanning={isAnalyzing}
-            soundEnabled={soundEnabled}
-          />
-        </div>
+      {/* Main Centered SerMate AI Workspace */}
+      <div className="w-full">
+        {isPipActive ? (
+          /* PiP Active Placeholder Card */
+          <div className="w-full min-h-[520px] rounded-2xl border border-cyan-500/40 bg-slate-900/70 backdrop-blur-xl p-8 flex flex-col items-center justify-center text-center space-y-6 shadow-2xl relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 via-transparent to-slate-950/40 pointer-events-none" />
+            
+            <div className="relative">
+              <div className="w-16 h-16 rounded-2xl bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center shadow-lg shadow-cyan-500/20 animate-pulse">
+                <PictureInPicture2 className="w-8 h-8 text-cyan-300" />
+              </div>
+              <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-slate-900" />
+              </span>
+            </div>
 
-        {/* Right Column: Floating Preview Widget (5 cols) */}
-        <div className="lg:col-span-5 flex flex-col">
-          <FloatingPreviewWidget
-            theme={theme}
-            messages={messages}
-            prompt={prompt}
-            onChangePrompt={onChangePrompt}
-            onAnalyze={onAnalyze}
-            isAnalyzing={isAnalyzing}
-            isStreaming={isStreaming}
-            onSelectFollowUp={onSelectFollowUp}
-            onClearChat={onClearChat}
-            modeBadge={isMockMode ? 'MOCK ENGINE' : `AI: ${modelUsed.replace('gemini-', '')}`}
-            isEmbeddedInSandbox={true}
-          />
-        </div>
+            <div className="space-y-2 max-w-md">
+              <div className="flex items-center justify-center gap-2">
+                <span className="px-2.5 py-0.5 rounded text-[10px] font-mono uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                  Floating Overlay Active
+                </span>
+              </div>
+              <h3 className="text-xl font-bold text-white tracking-tight">
+                Widget is Floating Over Your Desktop
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                SerMate AI is currently running in a Picture-in-Picture floating window over your code editors, browsers, and desktop software.
+              </p>
+            </div>
+
+            {/* Status information pills */}
+            <div className="w-full bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-left space-y-2.5 max-w-md">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400 flex items-center gap-1.5">
+                  <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                  <span>Real-time sync</span>
+                </span>
+                <span className="text-cyan-300 font-mono font-bold text-[11px]">Connected</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400">Messages in thread</span>
+                <span className="text-slate-200 font-mono font-bold text-[11px]">{messages.length}</span>
+              </div>
+              {isStreaming && (
+                <div className="flex items-center gap-2 text-xs text-cyan-400 font-mono animate-pulse">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Streaming response into floating overlay...</span>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 pt-2 w-full max-w-md">
+              {onTogglePip && (
+                <button
+                  onClick={() => {
+                    if (soundEnabled) sound.playClick();
+                    onTogglePip();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-cyan-500/20 cursor-pointer"
+                >
+                  <Minimize2 className="w-4 h-4" />
+                  <span>Return Widget to Tab</span>
+                </button>
+              )}
+
+              {onCaptureScreen && (
+                <button
+                  onClick={() => {
+                    if (soundEnabled) sound.playClick();
+                    onCaptureScreen();
+                  }}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer"
+                  title="Capture active screen or window"
+                >
+                  <Camera className="w-4 h-4 text-cyan-400" />
+                  <span>Capture Screen</span>
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Regular Embedded Full-Featured Floating Preview Widget */
+          <div className="w-full min-h-[580px]">
+            <FloatingPreviewWidget
+              theme={theme}
+              messages={messages}
+              prompt={prompt}
+              onChangePrompt={onChangePrompt}
+              onAnalyze={onAnalyze}
+              isAnalyzing={isAnalyzing}
+              isStreaming={isStreaming}
+              onSelectFollowUp={onSelectFollowUp}
+              onClearChat={onClearChat}
+              modeBadge={isMockMode ? 'MOCK ENGINE' : `AI: ${modelUsed.replace('gemini-', '')}`}
+              isEmbeddedInSandbox={true}
+              isPipActive={false}
+              onTogglePip={onTogglePip}
+              onCaptureScreen={onCaptureScreen}
+              customImageBase64={customImageBase64}
+              onUploadCustomImage={onUploadCustomImage}
+              onRemoveCustomImage={onRemoveCustomImage}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Sandbox Quick Capabilities Footer */}
+      {/* Capabilities Highlights Footer */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
         <div className="p-3.5 glass border border-slate-800 rounded-xl flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-4 h-4 text-rose-400" />
+          <div className="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
+            <Camera className="w-4 h-4 text-cyan-400" />
           </div>
           <div>
-            <div className="text-xs font-bold text-white">Visual Bug Detection</div>
-            <div className="text-[11px] text-slate-400">Zeroes in on stack traces & exceptions</div>
+            <div className="text-xs font-bold text-white">Multimodal Vision Inspection</div>
+            <div className="text-[11px] text-slate-400">Capture active screens or drop screenshots</div>
           </div>
         </div>
 
         <div className="p-3.5 glass border border-slate-800 rounded-xl flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
-            <Cpu className="w-4 h-4 text-cyan-400" />
+          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+            <PictureInPicture2 className="w-4 h-4 text-emerald-400" />
           </div>
           <div>
-            <div className="text-xs font-bold text-white">Bounding Box Coordinates</div>
-            <div className="text-[11px] text-slate-400">Spatial element normalization [0-100%]</div>
+            <div className="text-xs font-bold text-white">Picture-in-Picture HUD</div>
+            <div className="text-[11px] text-slate-400">Floats on top of all desktop apps</div>
           </div>
         </div>
 
@@ -258,7 +357,7 @@ export const DashboardSandbox: React.FC<DashboardSandboxProps> = ({
             <Zap className="w-4 h-4 text-amber-400" />
           </div>
           <div>
-            <div className="text-xs font-bold text-white">Instant Streaming & Solutions</div>
+            <div className="text-xs font-bold text-white">Instant Streaming & Fixes</div>
             <div className="text-[11px] text-slate-400">Actionable checklist & 1-click code patches</div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   WidgetTheme, 
   SettingsState, 
@@ -28,10 +29,15 @@ import { DashboardSandbox } from './components/DashboardSandbox';
 import { WidgetCustomizer } from './components/WidgetCustomizer';
 import { SettingsTab } from './components/SettingsTab';
 import { FloatingOverlayWidget } from './components/FloatingOverlayWidget';
+import { FloatingPreviewWidget } from './components/FloatingPreviewWidget';
 import { InstallModal } from './components/InstallModal';
 import { RightEdgeInstallButton } from './components/RightEdgeInstallButton';
 import { StandaloneHudView } from './components/StandaloneHudView';
-import { openStandaloneFloatingHUD } from './utils/pipCompanion';
+import { 
+  openStandaloneFloatingHUD, 
+  isDocumentPipSupported, 
+  requestDocumentPipWindow 
+} from './utils/pipCompanion';
 
 export default function App() {
   // Check if opened as standalone HUD or Electron desktop widget (#desktop-widget / #standalone-hud)
@@ -85,6 +91,11 @@ export default function App() {
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [hotkeyFlashed, setHotkeyFlashed] = useState<boolean>(false);
   const [floatingOverlayOpen, setFloatingOverlayOpen] = useState<boolean>(false);
+
+  // Document Picture-in-Picture States
+  const [isPipActive, setIsPipActive] = useState<boolean>(false);
+  const [pipContainer, setPipContainer] = useState<HTMLElement | null>(null);
+  const pipWindowRef = useRef<Window | null>(null);
 
   const streamIntervalRef = useRef<any>(null);
 
@@ -511,12 +522,92 @@ export default function App() {
     );
   }
 
-  const handleLaunchFloatingHUD = () => {
-    if (!widgetActive) {
-      handleToggleWidgetActive();
+  // Document Picture-in-Picture (PiP) Toggle Handler
+  const handleTogglePip = useCallback(async () => {
+    if (theme.soundEnabled) sound.playClick();
+
+    // 1. If PiP is already active, close the window and return widget to host
+    if (isPipActive && pipWindowRef.current) {
+      try {
+        pipWindowRef.current.close();
+      } catch (e) {
+        console.warn('PiP window close error:', e);
+      }
+      setIsPipActive(false);
+      setPipContainer(null);
+      pipWindowRef.current = null;
+      return;
     }
-    openStandaloneFloatingHUD();
-  };
+
+    // 2. Check Document PiP API support
+    if (!isDocumentPipSupported()) {
+      alert(
+        'Document Picture-in-Picture API is not supported in this browser.\n\n' +
+        'Please use Google Chrome 116+ or Microsoft Edge 116+ to pop out the floating overlay over desktop applications.'
+      );
+      // Fallback: Standalone popup window
+      openStandaloneFloatingHUD();
+      return;
+    }
+
+    // 3. Request Document PiP window
+    try {
+      const pipData = await requestDocumentPipWindow({
+        width: 420,
+        height: 640,
+      });
+
+      if (pipData) {
+        pipWindowRef.current = pipData.pipWindow;
+        setPipContainer(pipData.container);
+        setIsPipActive(true);
+        if (theme.soundEnabled) sound.playSuccess();
+
+        // 4. Return to PWA logic on close (pagehide / beforeunload)
+        const handleClose = () => {
+          setIsPipActive(false);
+          setPipContainer(null);
+          pipWindowRef.current = null;
+        };
+
+        pipData.pipWindow.addEventListener('pagehide', handleClose);
+        pipData.pipWindow.addEventListener('beforeunload', handleClose);
+      }
+    } catch (err: any) {
+      console.warn('Failed to open Document PiP window:', err);
+      if (err?.name !== 'AbortError') {
+        alert(`Could not open Picture-in-Picture window: ${err?.message || err}`);
+      }
+    }
+  }, [isPipActive, theme.soundEnabled]);
+
+  // Screen Capture directly from floating PiP or Sandbox
+  const handleCaptureRealScreen = useCallback(async () => {
+    try {
+      if (theme.soundEnabled) sound.playClick();
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+      });
+      const track = stream.getVideoTracks()[0];
+      const imageCapture = new (window as any).ImageCapture(track);
+      const bitmap = await imageCapture.grabFrame();
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(bitmap, 0, 0);
+        const base64 = canvas.toDataURL('image/png');
+        handleUploadCustomImage(base64);
+        if (theme.soundEnabled) sound.playSuccess();
+        handleAnalyzeScreen('Inspect active screen capture and identify errors, bugs, or improvements.');
+      }
+      track.stop();
+    } catch (err) {
+      console.warn('Screen capture cancelled or unavailable:', err);
+    }
+  }, [theme.soundEnabled, handleAnalyzeScreen]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
@@ -540,16 +631,9 @@ export default function App() {
         {activeTab === 'dashboard' && (
           <DashboardSandbox
             theme={theme}
-            scenario={currentScenario}
-            onSelectScenario={handleSelectScenario}
-            allScenarios={MOCK_SCENARIOS}
             customImageBase64={customImageBase64}
             onUploadCustomImage={handleUploadCustomImage}
-            boundingBoxes={boundingBoxes}
-            showBoxes={showBoxes}
-            onToggleShowBoxes={() => setShowBoxes(!showBoxes)}
-            selectedBoxId={selectedBoxId}
-            onSelectBox={setSelectedBoxId}
+            onRemoveCustomImage={() => setCustomImageBase64(null)}
             messages={messages}
             prompt={prompt}
             onChangePrompt={setPrompt}
@@ -570,6 +654,9 @@ export default function App() {
             onToggleWidgetActive={handleToggleWidgetActive}
             onTriggerDirectInstall={handleTriggerDirectInstall}
             isAppInstalled={isAppInstalled}
+            isPipActive={isPipActive}
+            onTogglePip={handleTogglePip}
+            onCaptureScreen={handleCaptureRealScreen}
           />
         )}
 
@@ -622,6 +709,32 @@ export default function App() {
           isMockMode={settings.isMockMode || !settings.geminiApiKey}
           modelUsed={settings.model}
         />
+      )}
+
+      {/* Document Picture-in-Picture Portal */}
+      {isPipActive && pipContainer && createPortal(
+        <div className="h-full w-full bg-slate-950 p-2 flex flex-col overflow-hidden">
+          <FloatingPreviewWidget
+            theme={theme}
+            messages={messages}
+            prompt={prompt}
+            onChangePrompt={setPrompt}
+            onAnalyze={handleAnalyzeScreen}
+            isAnalyzing={isAnalyzing}
+            isStreaming={isStreaming}
+            onSelectFollowUp={(q) => handleAnalyzeScreen(q)}
+            onClearChat={handleClearChat}
+            modeBadge={settings.isMockMode || !settings.geminiApiKey ? 'MOCK ENGINE' : `AI: ${settings.model.replace('gemini-', '')}`}
+            isEmbeddedInSandbox={false}
+            isPipActive={true}
+            onTogglePip={handleTogglePip}
+            onCaptureScreen={handleCaptureRealScreen}
+            customImageBase64={customImageBase64}
+            onUploadCustomImage={handleUploadCustomImage}
+            onRemoveCustomImage={() => setCustomImageBase64(null)}
+          />
+        </div>,
+        pipContainer
       )}
 
       {/* Small Download Button on the Right Mid Edge of the Screen (Disappears when installed) */}
