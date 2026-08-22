@@ -34,9 +34,12 @@ import { StandaloneHudView } from './components/StandaloneHudView';
 import { openStandaloneFloatingHUD } from './utils/pipCompanion';
 
 export default function App() {
-  // Check if opened as standalone HUD window (#standalone-hud)
+  // Check if opened as standalone HUD or Electron desktop widget (#desktop-widget / #standalone-hud)
   const [isStandaloneHud, setIsStandaloneHud] = useState<boolean>(() => {
-    return typeof window !== 'undefined' && window.location.hash === '#standalone-hud';
+    if (typeof window === 'undefined') return false;
+    const isHashMatched = window.location.hash === '#desktop-widget' || window.location.hash === '#standalone-hud';
+    const isElectronEnv = /Electron/i.test(navigator.userAgent) || Boolean((window as any).process?.versions?.electron);
+    return isHashMatched || isElectronEnv;
   });
 
   // Navigation & Core States
@@ -85,10 +88,11 @@ export default function App() {
 
   const streamIntervalRef = useRef<any>(null);
 
-  // Listen for hash change (#standalone-hud)
+  // Listen for hash change (#standalone-hud / #desktop-widget)
   useEffect(() => {
     const handleHashChange = () => {
-      setIsStandaloneHud(window.location.hash === '#standalone-hud');
+      const isMatched = window.location.hash === '#standalone-hud' || window.location.hash === '#desktop-widget';
+      setIsStandaloneHud(isMatched || /Electron/i.test(navigator.userAgent));
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);

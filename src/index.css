@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+html.electron-mode,
+body.electron-mode {
+  background-color: transparent !important;
+  background: transparent !important;
+  overflow: hidden;
+}
+
+.drag-region {
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.no-drag-region {
+  -webkit-app-region: no-drag;
+}
+
 @layer utilities {
   .glass {
     background: rgba(30, 41, 59, 0.7);

@@ -16,12 +16,13 @@ function createWindow() {
     height: widgetHeight,
     x: initialX,
     y: initialY,
-    alwaysOnTop: true,      // Keeps widget above all software
-    frame: false,            // Removes title bar for frameless floating look
-    transparent: true,       // Enables see-through glass background
+    frame: false,            // Removes title bar, close/minimize buttons, and window frame
+    transparent: true,       // Enables transparent CSS background so only the widget renders
+    alwaysOnTop: true,       // Keeps widget floating above all software
     resizable: false,        // Fixed floating widget size
-    skipTaskbar: false,      // Accessible in taskbar / dock
     hasShadow: false,        // Lets custom CSS handle ambient neon glow shadows
+    skipTaskbar: false,      // Accessible in taskbar / dock
+    backgroundColor: '#00000000', // Fully transparent window canvas
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -40,12 +41,12 @@ function createWindow() {
     mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   }
 
-  // Loads your built React app (or dev server)
+  // Loads your built React app with #desktop-widget route
   const isDev = process.env.NODE_ENV === 'development';
   if (isDev) {
-    mainWindow.loadURL('http://localhost:3000');
+    mainWindow.loadURL('http://localhost:3000/#desktop-widget');
   } else {
-    mainWindow.loadFile('dist/index.html');
+    mainWindow.loadFile('dist/index.html', { hash: 'desktop-widget' });
   }
 
   // Optional IPC Handler for dynamic click-through switching (e.g. transparent click-through mode)
