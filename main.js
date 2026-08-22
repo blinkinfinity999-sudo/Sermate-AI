@@ -1,16 +1,26 @@
-const { app, BrowserWindow, globalShortcut, ipcMain } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require('electron');
 
 let mainWindow;
 
 function createWindow() {
+  const widgetWidth = 440;
+  const widgetHeight = 680;
+
+  // Calculate bottom-right positioning based on primary display work area
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const initialX = width - widgetWidth - 20;
+  const initialY = height - widgetHeight - 20;
+
   mainWindow = new BrowserWindow({
-    width: 440,
-    height: 680,
+    width: widgetWidth,
+    height: widgetHeight,
+    x: initialX,
+    y: initialY,
     alwaysOnTop: true,      // Keeps widget above all software
     frame: false,            // Removes title bar for frameless floating look
     transparent: true,       // Enables see-through glass background
-    resizable: true,         // Allows customizable floating bounds
-    skipTaskbar: true,       // Stays lightweight in background without cluttering taskbar
+    resizable: false,        // Fixed floating widget size
+    skipTaskbar: false,      // Accessible in taskbar / dock
     hasShadow: false,        // Lets custom CSS handle ambient neon glow shadows
     webPreferences: {
       nodeIntegration: true,
@@ -18,9 +28,9 @@ function createWindow() {
     }
   });
 
-  // Stay on top of full-screen apps, games, and presentation screens
+  // Stay on top of full-screen apps, games, and presentation screens with high priority
   try {
-    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
   } catch (e) {
     mainWindow.setAlwaysOnTop(true);
   }
