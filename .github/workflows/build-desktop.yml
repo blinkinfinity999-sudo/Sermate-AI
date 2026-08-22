@@ -3,10 +3,12 @@ name: Build Windows Desktop App
 on:
   push:
     branches:
-      - main
+      - '**'
+    tags:
+      - 'v*'
   pull_request:
     branches:
-      - main
+      - '**'
   workflow_dispatch:
 
 permissions:
@@ -28,7 +30,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build Web & Server Assets
         run: npm run build
@@ -37,13 +39,16 @@ jobs:
         run: npx electron-builder --win nsis
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEBUG: electron-builder
 
       - name: Upload Windows Executable Artifact
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: Sermate-AI-Windows-Installer
           path: |
             release/*.exe
             release/*.blockmap
+            release/builder-effective-config.yaml
           retention-days: 30
           if-no-files-found: warn
